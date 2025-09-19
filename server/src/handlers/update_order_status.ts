@@ -1,21 +1,38 @@
+import { db } from '../db';
+import { ordersTable } from '../db/schema';
 import { type UpdateOrderStatusInput, type Order } from '../schema';
+import { eq } from 'drizzle-orm';
 
-export async function updateOrderStatus(input: UpdateOrderStatusInput): Promise<Order> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is updating the status of an existing order.
-    // Should validate that the order exists and the status transition is valid.
-    return Promise.resolve({
-        id: input.id,
-        customer_name: 'Placeholder Customer',
-        customer_phone: null,
-        customer_email: null,
-        total_amount: 0,
+export const updateOrderStatus = async (input: UpdateOrderStatusInput): Promise<Order> => {
+  try {
+    // First, verify the order exists
+    const existingOrders = await db.select()
+      .from(ordersTable)
+      .where(eq(ordersTable.id, input.id))
+      .execute();
+
+    if (existingOrders.length === 0) {
+      throw new Error(`Order with id ${input.id} not found`);
+    }
+
+    // Update the order status and updated_at timestamp
+    const result = await db.update(ordersTable)
+      .set({
         status: input.status,
-        payment_status: 'pending',
-        payment_method: null,
-        payment_reference: null,
-        notes: null,
-        created_at: new Date(),
         updated_at: new Date()
-    } as Order);
-}
+      })
+      .where(eq(ordersTable.id, input.id))
+      .returning()
+      .execute();
+
+    // Convert numeric fields back to numbers before returning
+    const order = result[0];
+    return {
+      ...order,
+      total_amount: parseFloat(order.total_amount)
+    };
+  } catch (error) {
+    console.error('Order status update failed:', error);
+    throw error;
+  }
+};

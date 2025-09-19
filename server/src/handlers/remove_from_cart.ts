@@ -1,6 +1,18 @@
+import { db } from '../db';
+import { cartItemsTable } from '../db/schema';
+import { eq } from 'drizzle-orm';
+
 export async function removeFromCart(cartItemId: number): Promise<boolean> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is removing a specific item from the cart.
-    // Should return true if successfully removed, false if item not found.
-    return true;
+  try {
+    // Delete the cart item by ID
+    const result = await db.delete(cartItemsTable)
+      .where(eq(cartItemsTable.id, cartItemId))
+      .execute();
+
+    // Check if any rows were affected (item was found and deleted)
+    return result.rowCount !== null && result.rowCount > 0;
+  } catch (error) {
+    console.error('Remove from cart failed:', error);
+    throw error;
+  }
 }
